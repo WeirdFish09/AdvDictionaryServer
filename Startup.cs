@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Hosting;
@@ -12,6 +13,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
 using MySql.Data;
 using Microsoft.EntityFrameworkCore;
 using AdvDictionaryServer.DBContext;
@@ -47,6 +49,19 @@ namespace AdvDictionaryServer
                 .AddEntityFrameworkStores<DictionaryDBContext>()
                 .AddDefaultTokenProviders();
 
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                            ValidateIssuer = true,
+                            ValidIssuer = AuthOptions.ISSUER,
+                            ValidateAudience = true,
+                            ValidAudience = AuthOptions.AUDIENCE,
+                            ValidateLifetime = true,
+                            IssuerSigningKey = AuthOptions.GetSymmetricSecurityKey(),
+                            ValidateIssuerSigningKey = true,
+                        };
+            });
             services.AddMvc(config =>
             {
                 var policy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
@@ -77,7 +92,12 @@ namespace AdvDictionaryServer
             {
                 routes.MapRoute(
                     name: "default",
-                    template: "{controller=Home}/{action=Index}/{id?}");
+                    template: "{controller=Home}/{action=Index}/{id?}")
+                      .MapRoute(
+                          name:"Login",
+                          template:"JSONData/Login/{model}",
+                          defaults: new {controller = "JSONData", action = "Login"}
+                      );
             });
         }
     }
