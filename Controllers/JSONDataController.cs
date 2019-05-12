@@ -224,6 +224,16 @@ namespace AdvDictionaryServer.Controllers
             return Ok();
         }
 
+        [HttpPost]
+        [Authorize(AuthenticationSchemes="Bearer")]
+        public async Task<JsonResult> GenerateQuiz([FromBody] LanguageInputModel languageInputModel) 
+        {
+            User user = await GetUser();
+            Language language = dbcontext.Languages.Where(l => l.User == user & l.Name == languageInputModel.Name).SingleOrDefault();
+            List<WordPriority> wordPriorities = new WordPicker(dbcontext,language).GenerateWordsForQuiz(20);
+            return new JsonResult(wordPriorities);
+        }
+
         [HttpGet]
         [Authorize(AuthenticationSchemes = "Bearer")]
         public async Task<JsonResult> GetLanguages()
