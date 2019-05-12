@@ -10,6 +10,5 @@ namespace AdvDictionaryServer.Models
         [Required]
         public string Phrase {get; set;}
         
-        public Encoding Encoding {get; set;}
     }    
 }

@@ -9,6 +9,8 @@ using Newtonsoft.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
 using AdvDictionaryServer.Models;
 using AdvDictionaryServer.DBContext;
 
@@ -29,9 +31,9 @@ namespace AdvDictionaryServer.Controllers
 
         [HttpGet]
         [Authorize(AuthenticationSchemes = "Bearer")]
-        public async Task<JsonResult> Fish()
+        public IActionResult Fish()
         {
-            var fish = JsonConvert.SerializeObject(new {fish = "Awesome"});
+            var fish = JsonConvert.SerializeObject(new {fish = "Awesome, " + User.Claims.Where(c => c.Type == ClaimTypes.Email).Select(c => c.Value).FirstOrDefault()});
             return new JsonResult(fish);
         }
 
@@ -45,7 +47,7 @@ namespace AdvDictionaryServer.Controllers
                 var result = await signInManager.PasswordSignInAsync(user,model.Password,false,false);
                 if(result==Microsoft.AspNetCore.Identity.SignInResult.Success){
                     Response.ContentType = "application/json";
-                    var response = new {Token = (new JwtSecurityTokenHandler()).WriteToken(await CreateToken(user)), Id = user.Id};
+                    var response = new {Token = (new JwtSecurityTokenHandler()).WriteToken(CreateToken(user)), Id = user.Id};
                     return new JsonResult(response); //return a jwt
                 } else {
                     throw new NotImplementedException(); //return an error with wrong password warning
@@ -59,12 +61,12 @@ namespace AdvDictionaryServer.Controllers
         public async Task<JsonResult> Register([FromBody]RegisterModel registerModel)
         {
             //RegisterModel registerModel = JsonConvert.DeserializeObject<RegisterModel>(registerModelJson);
-            User user = new User { Email = registerModel.Email, UserName = registerModel.Email };
+            User user = new User { Email = registerModel.Email, UserName = registerModel.Email, NativeLanguage = registerModel.NativeLanguage };
             var result = await userManager.CreateAsync(user, registerModel.Password);
             if (result.Succeeded)
             {
                 await signInManager.SignInAsync(user, false);
-                var jwt = await CreateToken(user);
+                var jwt = CreateToken(user);
                 var jwtToken = (new JwtSecurityTokenHandler()).WriteToken(jwt);
                 Response.ContentType = "application/json";
                 var response = new {Token = jwtToken, Id = user.Id};
@@ -73,44 +75,200 @@ namespace AdvDictionaryServer.Controllers
             throw new NotImplementedException(); //return an error 
         }
 
-        [HttpGet]
-        public async Task<JsonResult> GetAllWordsAsync() //??
-        {
-            throw new NotImplementedException();
-        }
-
-        [HttpGet]
-        public async Task<JsonResult> GetWordPriorities(int amount, int offset)
-        {
-            throw new NotImplementedException();
-        }
-
+        // [HttpGet]
+        // [Authorize(AuthenticationSchemes = "Bearer")]
+        // public async Task<JsonResult> GetNativePhrasesAsync([FromBody]GetNativePhrasesModel phrasesModel) //??
+        // {
+        //     User user = await GetUser();
+        //     var nativePhrases = dbcontext.WordPriorities
+        //                             .Where(wp => wp.Language.User == user)
+        //                             .Select(wp => wp.NativePhrase)
+        //                             .Skip(phrasesModel.Offset)
+        //                             .Take(phrasesModel.Amount)
+        //                             .ToList();
+        //     return new JsonResult(nativePhrases);
+        // }
 
         [HttpPost]
-        public async Task<JsonResult> SetWordPriority(WordPriority WordPriority)
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        public async Task<JsonResult> GetTranslations([FromBody]GetTranslations translationsModel) //??
         {
-            throw new NotImplementedException();
+            User user = await GetUser();
+            Language language = dbcontext.Languages.Where(l => l.Name == translationsModel.Language && l.User == user).Single();
+            var wordPriorities = dbcontext.WordPriorities
+                                    .Where(wp => wp.Language == language && wp.ForeignWord.Word == translationsModel.Word)
+                                    .Include(wp => wp.ForeignWord)
+                                    .Include(wp => wp.NativePhrase)
+                                    .ToList();
+            List<WordPrioritiesJSON> wordPrioritiesJSON = new List<WordPrioritiesJSON>();
+            foreach(var wp in wordPriorities){
+                wordPrioritiesJSON.Add(
+                    new WordPrioritiesJSON(){
+                        Phrase = new NativePhraseJson() {Phrase = wp.NativePhrase.Phrase},
+                        Word = new ForeignWordJSON(){Word = wp.ForeignWord.Word},
+                        Language = new LanguageJSON(){Name = wp.Language.Name},
+                        Value = wp.Value
+                    }
+                );
+            }
+            return new JsonResult(wordPrioritiesJSON);
         }
 
         [HttpGet]
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        public async Task<JsonResult> GetForeignWordsAsync([FromBody]GetForeignWordsModel wordsModel) //??
+        {
+            User user = await GetUser();
+            var nativePhrases = dbcontext.WordPriorities
+                                    .Where(wp => wp.Language.User == user && wp.Language.Name == wordsModel.Language)
+                                    .Select(wp => wp.ForeignWord)
+                                    .Skip(wordsModel.Offset)
+                                    .Take(wordsModel.Amount)
+                                    .ToList();
+            return new JsonResult(nativePhrases);
+        }
+
+        [HttpPost]
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        public async Task<JsonResult> GetWordsPriorities([FromBody]GetWordPrioritiesModel wordPrioritiesModel)
+        {
+            User user = await GetUser();
+            var wordPriorities = dbcontext.WordPriorities
+                                    .Where(wp => wp.Language.User == user && wp.Language.Name == wordPrioritiesModel.Language )
+                                    .Skip(wordPrioritiesModel.Offset)
+                                    .Take(wordPrioritiesModel.Amount)
+                                    .Include(wp => wp.ForeignWord)
+                                    .Include(wp => wp.NativePhrase)
+                                    .Include(wp => wp.Language)
+                                    .ToList();
+            List<WordPrioritiesJSON> wordPrioritiesJSON = new List<WordPrioritiesJSON>();
+            foreach(var wp in wordPriorities){
+                wordPrioritiesJSON.Add(
+                    new WordPrioritiesJSON(){
+                        Phrase = new NativePhraseJson() {Phrase = wp.NativePhrase.Phrase},
+                        Word = new ForeignWordJSON(){Word = wp.ForeignWord.Word},
+                        Language = new LanguageJSON(){Name = wp.Language.Name},
+                        Value = wp.Value
+                    }
+                );
+            }
+            return new JsonResult(wordPrioritiesJSON);
+        }
+
+        [HttpPost]
+        [Authorize(AuthenticationSchemes="Bearer")]
+        public async Task<JsonResult> GetWordPrioritiesCount([FromBody]LanguageInputModel languageInputModel)
+        {
+            User user = await GetUser();
+            int amount = await dbcontext.WordPriorities.Where(wp => wp.Language.Name==languageInputModel.Name).CountAsync();
+            return new JsonResult(amount);
+        } 
+
+        [HttpPost]
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        public async Task<IActionResult> AddWordsPriorities([FromBody] List<WordPrioritiesJSON> wordPrioritiesJSON)
+        {
+            User user = await GetUser();
+            Language language = dbcontext.Languages.Where(l => (l.User == user) &&( l.Name == wordPrioritiesJSON[0].Language.Name)).Single();
+            List<WordPriority> wordPriorities = new List<WordPriority>();
+            foreach(var wp in wordPrioritiesJSON){
+                wordPriorities.Add(new WordPriority(){
+                    Language = language,
+                    ForeignWord = new ForeignWord(){Word = wp.Word.Word},
+                    NativePhrase = new NativePhrase() {Phrase = wp.Phrase.Phrase},
+                    Value = wp.Value
+                });
+            } 
+            await dbcontext.WordPriorities.AddRangeAsync(wordPriorities);
+            await dbcontext.SaveChangesAsync();
+            return Ok();
+        }
+
+        [HttpPost]
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        public async Task<IActionResult> UpdateWordsPriorities([FromBody] List<WordPrioritiesJSON> wordPrioritiesJSON)
+        {
+            User user = await GetUser();
+            Language language = dbcontext.Languages.Where(l => l.User == user && l.Name == wordPrioritiesJSON[0].Language.Name).Single();
+            var oldWordPriorities = dbcontext.WordPriorities.Where(wp => wp.Language == language && wp.ForeignWord.Word == wordPrioritiesJSON[0].Word.Word);
+            var oldNativePhrases = oldWordPriorities.Select(wp => wp.NativePhrase);
+            ForeignWord foreignWord = oldWordPriorities.Select(wp => wp.ForeignWord).Single();
+            dbcontext.NativePhrases.RemoveRange(oldNativePhrases);
+            dbcontext.WordPriorities.RemoveRange(oldWordPriorities);
+            List<WordPriority> newWordPriorities = new List<WordPriority>();
+            foreach(var wpjson in wordPrioritiesJSON)
+            {
+                newWordPriorities.Add(new WordPriority(){
+                    ForeignWord = foreignWord,
+                    Language = language,
+                    NativePhrase = new NativePhrase() {Phrase = wpjson.Phrase.Phrase},
+                    Value = wpjson.Value
+                });
+            }
+            await dbcontext.WordPriorities.AddRangeAsync(newWordPriorities);
+            await dbcontext.SaveChangesAsync();
+            return Ok();
+        } 
+
+        [HttpPost]
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        public async Task<IActionResult> SetWordPriority([FromBody]WordPriority wordPriorityModel)
+        {
+            NativePhrase nativePhrase = new NativePhrase() {Phrase = wordPriorityModel.NativePhrase.Phrase };
+            ForeignWord foreignWord = new ForeignWord() {Word = wordPriorityModel.ForeignWord.Word };
+            User user = await GetUser();
+            Language language = dbcontext.Languages.Where(l => l.User == user && l.Name ==wordPriorityModel.Language.Name).SingleOrDefault();
+            WordPriority wordPriority = new WordPriority() {NativePhrase = nativePhrase, ForeignWord = foreignWord, Language = language,Value = wordPriorityModel.Value };
+            dbcontext.WordPriorities.Add(wordPriority);
+            await dbcontext.SaveChangesAsync();
+            return Ok();
+        }
+
+        [HttpGet]
+        [Authorize(AuthenticationSchemes = "Bearer")]
         public async Task<JsonResult> GetLanguages()
         {
-            throw new NotImplementedException();
+            User user = await GetUser();
+            //var languages = dbcontext.WordPriorities.Where(wp => wp.User == user ).Select(wp => wp.Language).ToList();
+            var languageNames = dbcontext.Languages
+                                .Where(l => l.User == user).Select(l => l.Name).ToList();
+            List<LanguageJSON> languages = new List<LanguageJSON>();
+            foreach(var name in languageNames){
+                languages.Add(new LanguageJSON(){Name = name});
+            }
+            return new JsonResult(languages);
         }
 
         [HttpPost]
-        public async Task<JsonResult> AddLanguage(Language language)
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        public async Task<IActionResult> AddLanguage([FromBody]LanguageInputModel languageInputModel)
         {
-            throw new NotImplementedException();
+            
+            languageInputModel.Name.ToLower();
+            languageInputModel.Name.Trim();
+            User user = await userManager.FindByEmailAsync(User.Claims.Where(c => c.Type == ClaimTypes.Email).Select(c => c.Value).SingleOrDefault());
+            Language language = new Language { Name = languageInputModel.Name, User = user};
+            if(!dbcontext.Languages.Contains(language)){
+                await dbcontext.Languages.AddAsync(language);
+                await dbcontext.SaveChangesAsync();
+            }
+            return Ok();
         }
-        private async Task <JwtSecurityToken> CreateToken(User user){
+        private JwtSecurityToken CreateToken(User user){
+            var claims = new List<Claim>(){
+                new Claim(ClaimTypes.Email,user.Email)
+            };
             return new JwtSecurityToken(
                     issuer:AuthOptions.ISSUER,
                     audience: AuthOptions.AUDIENCE,
-                    claims: await userManager.GetClaimsAsync(user),
+                    claims: claims,
                     notBefore: DateTime.Now,
                     expires: DateTime.Now.Add(TimeSpan.FromMinutes(AuthOptions.LIFETIME)),
                     signingCredentials: new SigningCredentials(AuthOptions.GetSymmetricSecurityKey(),SecurityAlgorithms.HmacSha256));
+        }
+
+        private async Task<User> GetUser(){
+            return await userManager.FindByEmailAsync(User.Claims.Where(c => c.Type == ClaimTypes.Email).Select(c => c.Value).SingleOrDefault());
         }
         
     }

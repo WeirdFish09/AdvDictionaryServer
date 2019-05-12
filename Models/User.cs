@@ -9,5 +9,6 @@ namespace AdvDictionaryServer.Models
         {
             
         }
+        public string NativeLanguage{get; set;}
     }
 }

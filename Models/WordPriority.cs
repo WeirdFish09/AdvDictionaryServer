@@ -8,12 +8,12 @@ namespace AdvDictionaryServer.Models
         [Key]
         public int ID { get; set; }
         [Required]
-        public NativePhrase Phrase {get; set;}
+        public NativePhrase NativePhrase {get; set;}
 
-        public User User{get; set;}
+        public Language Language{get; set;}
 
         public ForeignWord ForeignWord{get; set;}
-        
-        public Encoding Encoding {get; set;}
+
+        public int Value { get; set; }
     }    
 }

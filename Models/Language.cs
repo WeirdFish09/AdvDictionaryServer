@@ -9,6 +9,7 @@ namespace AdvDictionaryServer.Models
         public int ID { get; set; }
         [Required]
         public string Name {get; set;}
-        
+        [Required]
+        public User User { get; set; }        
     }    
 }
