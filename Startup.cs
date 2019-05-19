@@ -14,7 +14,6 @@ using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-using MySql.Data;
 using Microsoft.EntityFrameworkCore;
 using AdvDictionaryServer.DBContext;
 using AdvDictionaryServer.Models;

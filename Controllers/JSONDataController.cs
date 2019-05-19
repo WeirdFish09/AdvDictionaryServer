@@ -5,7 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
-using Newtonsoft.Json;
+using Newtonsoft.Json; 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -39,7 +39,7 @@ namespace AdvDictionaryServer.Controllers
 
         [AllowAnonymous]
         [HttpPost]
-        public async Task<JsonResult> Login([FromBody]LoginModel model)
+        public async Task<IActionResult> Login([FromBody]LoginModel model)
         {
             //LoginModel loginModel = JsonConvert.DeserializeObject<LoginModel>(model);
             User user = await userManager.FindByEmailAsync(model.Email);
@@ -47,13 +47,13 @@ namespace AdvDictionaryServer.Controllers
                 var result = await signInManager.PasswordSignInAsync(user,model.Password,false,false);
                 if(result==Microsoft.AspNetCore.Identity.SignInResult.Success){
                     Response.ContentType = "application/json";
-                    var response = new {Token = (new JwtSecurityTokenHandler()).WriteToken(CreateToken(user)), Id = user.Id};
+                    var response = new LoginRegisterResponse(){ Token = (new JwtSecurityTokenHandler()).WriteToken(CreateToken(user)), Id = user.Id};
                     return new JsonResult(response); //return a jwt
                 } else {
-                    throw new NotImplementedException(); //return an error with wrong password warning
+                   
                 }
             }
-            throw new NotImplementedException(); //return an error with no such user warning
+            return NotFound(); //return an error with no such user warning
         }
 
         [AllowAnonymous]
@@ -69,7 +69,7 @@ namespace AdvDictionaryServer.Controllers
                 var jwt = CreateToken(user);
                 var jwtToken = (new JwtSecurityTokenHandler()).WriteToken(jwt);
                 Response.ContentType = "application/json";
-                var response = new {Token = jwtToken, Id = user.Id};
+                var response = new LoginRegisterResponse() { Token = jwtToken, Id = user.Id};
                 return new JsonResult(response);
             }
             throw new NotImplementedException(); //return an error 
@@ -94,6 +94,11 @@ namespace AdvDictionaryServer.Controllers
         public async Task<JsonResult> GetTranslations([FromBody]GetTranslations translationsModel) //??
         {
             User user = await GetUser();
+            //
+            List<Language> allLanguages = dbcontext.Languages.ToList();
+            List<Language> languages = allLanguages.Where(l => l.Name == translationsModel.Language).ToList();
+            List<Language> languages2 = dbcontext.Languages.Where(l => l.User == user).ToList();
+            //
             Language language = dbcontext.Languages.Where(l => l.Name == translationsModel.Language && l.User == user).Single();
             var wordPriorities = dbcontext.WordPriorities
                                     .Where(wp => wp.Language == language && wp.ForeignWord.Word == translationsModel.Word)
