@@ -236,7 +236,40 @@ namespace AdvDictionaryServer.Controllers
             User user = await GetUser();
             Language language = dbcontext.Languages.Where(l => l.User == user & l.Name == languageInputModel.Name).SingleOrDefault();
             List<WordPriority> wordPriorities = new WordPicker(dbcontext,language).GenerateWordsForQuiz(20);
-            return new JsonResult(wordPriorities);
+            List<WordPrioritiesJSON> wordPrioritiesJSON = new List<WordPrioritiesJSON>();
+            foreach(var wp in wordPriorities)
+            {
+                wordPrioritiesJSON.Add(new WordPrioritiesJSON()
+                {
+                    Value = wp.Value,
+                    Language = new LanguageJSON() { Name = wp.Language.Name },
+                    Phrase = new NativePhraseJson() { Phrase = wp.NativePhrase.Phrase },
+                    Word = new ForeignWordJSON() { Word = wp.ForeignWord.Word }
+                });
+            }
+            return new JsonResult(wordPrioritiesJSON);
+        }
+
+        [HttpPost]
+        [Authorize(AuthenticationSchemes ="Bearer")]
+        public async Task<IActionResult> SubmitQuiz([FromBody] List<WordPrioritiesJSON> wordPrioritiesJSON)
+        {
+            User user = await GetUser();
+            Language language = dbcontext.Languages.Where(l => l.User == user & l.Name == wordPrioritiesJSON[0].Language.Name).SingleOrDefault();
+            List<WordPriority> wordPriorities = new List<WordPriority>();
+            WordPriority wordPriority;
+            ForeignWord foreignWord;
+            NativePhrase nativePhrase;
+            foreach(var wpjson in wordPrioritiesJSON)
+            {
+                foreignWord = await dbcontext.ForeignWords.Where(fw => fw.Word == wpjson.Word.Word).SingleAsync();
+                nativePhrase = await dbcontext.NativePhrases.Where(np => np.Phrase == wpjson.Phrase.Phrase).SingleAsync();
+                wordPriority = await dbcontext.WordPriorities
+                    .Where(wp => wp.Language == language & wp.ForeignWord == foreignWord & wp.NativePhrase == nativePhrase).SingleAsync();
+                wordPriority.Value = wpjson.Value;
+            }
+            await dbcontext.SaveChangesAsync();
+            return Ok();
         }
 
         [HttpGet]
@@ -261,7 +294,7 @@ namespace AdvDictionaryServer.Controllers
             
             languageInputModel.Name.ToLower();
             languageInputModel.Name.Trim();
-            User user = await userManager.FindByEmailAsync(User.Claims.Where(c => c.Type == ClaimTypes.Email).Select(c => c.Value).SingleOrDefault());
+            User user = await GetUser();
             Language language = new Language { Name = languageInputModel.Name, User = user};
             if(!dbcontext.Languages.Contains(language)){
                 await dbcontext.Languages.AddAsync(language);
@@ -269,6 +302,35 @@ namespace AdvDictionaryServer.Controllers
             }
             return Ok();
         }
+
+
+        [HttpPost]
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        public async Task<IActionResult> ForeignWordExists([FromBody]CheckWordExists checkWordExists)
+        {
+            User user = await GetUser();
+            Language language = await dbcontext.Languages.Where(l => l.User == user & l.Name == checkWordExists.Language).SingleOrDefaultAsync();
+            ForeignWord foreignWord = await dbcontext.ForeignWords.Where(f => f.Word == checkWordExists.ForeignWord).SingleOrDefaultAsync();
+            if (language == null || foreignWord == null)
+            {
+                return NotFound();
+            }
+
+            List<NativePhrase> nativePhrases= await dbcontext.WordPriorities.Where(wp => wp.Language == language & wp.ForeignWord == foreignWord)
+                    .Select(wp => wp.NativePhrase)
+                    .ToListAsync();
+
+            
+            if(await dbcontext.WordPriorities.Where(wp => wp.Language != language & wp.ForeignWord == foreignWord).CountAsync() > 0)
+            {
+
+            } else
+            {
+                
+            }
+            return Ok();
+        }
+
         private JwtSecurityToken CreateToken(User user){
             var claims = new List<Claim>(){
                 new Claim(ClaimTypes.Email,user.Email)
