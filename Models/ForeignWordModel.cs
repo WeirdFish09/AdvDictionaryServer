@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace AdvDictionaryServer.Models
 {
-    public class CheckWordExists
+    public class ForeignWordModel
     {
         public string Language { get; set; }
         public string ForeignWord { get; set; }

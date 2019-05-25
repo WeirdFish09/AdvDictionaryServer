@@ -152,19 +152,28 @@ namespace AdvDictionaryServer.Models
             }
         }
 
+        //public List<WordPriority> GenerateWordsForQuiz(int count)
+        //{
+        //    int leastKnownWordPriority = dbContext.WordPriorities.Select(wp => wp.Value).Min();
+        //    int highestKnownWordPriority = dbContext.WordPriorities.Select(wp => wp.Value).Max();
+        //    List<WordPriority> wordPriorities = new List<WordPriority>();
+
+        //    if (highestKnownWordPriority - leastKnownWordPriority < 3)
+        //    {
+        //        wordPriorities.AddRange(SelectWithLowVariance(count, leastKnownWordPriority, highestKnownWordPriority));
+        //    } else
+        //    {
+        //        wordPriorities.AddRange(SelectWithHighVarianceNew(count, leastKnownWordPriority, highestKnownWordPriority));
+        //    }
+        //    return wordPriorities;
+        //}
+
         public List<WordPriority> GenerateWordsForQuiz(int count)
         {
             int leastKnownWordPriority = dbContext.WordPriorities.Select(wp => wp.Value).Min();
             int highestKnownWordPriority = dbContext.WordPriorities.Select(wp => wp.Value).Max();
             List<WordPriority> wordPriorities = new List<WordPriority>();
-
-            if (highestKnownWordPriority - leastKnownWordPriority < 3)
-            {
-                wordPriorities.AddRange(SelectWithLowVariance(count, leastKnownWordPriority, highestKnownWordPriority));
-            } else
-            {
-                wordPriorities.AddRange(SelectWithHighVarianceNew(count, leastKnownWordPriority, highestKnownWordPriority));
-            }
+            wordPriorities.AddRange(SelectWithHighVarianceNew(count, leastKnownWordPriority, highestKnownWordPriority));
             return wordPriorities;
         }
 

@@ -306,28 +306,79 @@ namespace AdvDictionaryServer.Controllers
 
         [HttpPost]
         [Authorize(AuthenticationSchemes = "Bearer")]
-        public async Task<IActionResult> ForeignWordExists([FromBody]CheckWordExists checkWordExists)
+        public async Task<IActionResult> ForeignWordExists([FromBody]ForeignWordModel checkWordExists)
         {
             User user = await GetUser();
             Language language = await dbcontext.Languages.Where(l => l.User == user & l.Name == checkWordExists.Language).SingleOrDefaultAsync();
             ForeignWord foreignWord = await dbcontext.ForeignWords.Where(f => f.Word == checkWordExists.ForeignWord).SingleOrDefaultAsync();
-            if (language == null || foreignWord == null)
+            if(await dbcontext.WordPriorities.Where(wp => wp.Language == language & wp.ForeignWord == foreignWord).AnyAsync())
             {
-                return NotFound();
+                return Ok();
             }
+            return NotFound();
+        }
 
-            List<NativePhrase> nativePhrases= await dbcontext.WordPriorities.Where(wp => wp.Language == language & wp.ForeignWord == foreignWord)
-                    .Select(wp => wp.NativePhrase)
-                    .ToListAsync();
-
-            
-            if(await dbcontext.WordPriorities.Where(wp => wp.Language != language & wp.ForeignWord == foreignWord).CountAsync() > 0)
+        [HttpPost]
+        [Authorize(AuthenticationSchemes ="Bearer")]
+        public async Task<IActionResult> DeleteWord([FromBody]ForeignWordModel foreignWordModel)
+        {
+            User user = await GetUser();
+            Language language = await dbcontext.Languages.Where(l => l.User == user & l.Name == foreignWordModel.Language).SingleOrDefaultAsync();
+            ForeignWord foreignWord = await dbcontext.ForeignWords.Where(f => f.Word == foreignWordModel.ForeignWord).SingleOrDefaultAsync();
+            List<NativePhrase> translations;
+            if (language == null | foreignWord == null) return NotFound();
+            if(await dbcontext.WordPriorities.Where(wp => wp.Language != language & wp.ForeignWord == foreignWord).AnyAsync())
             {
-
+                translations = await dbcontext.WordPriorities.Where(wp => wp.Language != language & wp.ForeignWord == foreignWord)
+                    .Select(wp => wp.NativePhrase).ToListAsync();
+                var wordPriorities = await dbcontext.WordPriorities.Where(wp => wp.Language == language & wp.ForeignWord == foreignWord).ToListAsync();
+                dbcontext.WordPriorities.RemoveRange(wordPriorities);
             } else
             {
-                
+                translations = await dbcontext.WordPriorities.Where(wp => wp.Language == language & wp.ForeignWord == foreignWord)
+                    .Select(wp => wp.NativePhrase).ToListAsync();
+                var wordPriorities = await dbcontext.WordPriorities.Where(wp => wp.Language == language & wp.ForeignWord == foreignWord).ToListAsync();
+                dbcontext.WordPriorities.RemoveRange(wordPriorities);
+                dbcontext.ForeignWords.Remove(foreignWord);
             }
+            foreach(var nativePhrase in translations)
+            {
+                if(!await dbcontext.WordPriorities.Where(wp => wp.NativePhrase == nativePhrase).AnyAsync())
+                {
+                    dbcontext.NativePhrases.Remove(nativePhrase);
+                }
+            }
+            return Ok();
+        }
+
+        [HttpPost]
+        [Authorize(AuthenticationSchemes = "Bearer")]
+        public async Task<IActionResult> RenameWord([FromBody]RenameWord renameWord)
+        {
+            User user = await GetUser();
+            Language language = await dbcontext.Languages.Where(l => l.User == user & l.Name == renameWord.Language).SingleOrDefaultAsync();
+            ForeignWord originalWord = await dbcontext.ForeignWords.Where(f => f.Word == renameWord.OriginalWord).SingleOrDefaultAsync();
+            ForeignWord newWord = await dbcontext.ForeignWords.Where(f => f.Word == renameWord.NewWord).SingleOrDefaultAsync();
+            if(newWord == null)
+            {
+                newWord = new ForeignWord() { Word = renameWord.NewWord };
+                dbcontext.ForeignWords.Add(newWord);
+                await dbcontext.SaveChangesAsync();
+                newWord = await dbcontext.ForeignWords.Where(f => f.Word == renameWord.NewWord).SingleAsync();
+            }
+            if (language == null || originalWord == null) return NotFound();
+            if (await dbcontext.WordPriorities.Where(wp => wp.ForeignWord == newWord && wp.Language == language).AnyAsync()) return Conflict();
+
+            if(!await dbcontext.WordPriorities.Where(wp => wp.Language!=language & wp.ForeignWord == originalWord).AnyAsync())
+            {
+                dbcontext.ForeignWords.Remove(originalWord);
+            } 
+            var wordPriorities = await dbcontext.WordPriorities.Where(wp => wp.Language == language && wp.ForeignWord == originalWord).ToListAsync();
+            foreach (var wp in wordPriorities)
+            {
+                wp.ForeignWord = newWord;
+            }
+            await dbcontext.SaveChangesAsync();
             return Ok();
         }
 
