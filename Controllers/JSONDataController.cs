@@ -75,20 +75,6 @@ namespace AdvDictionaryServer.Controllers
             throw new NotImplementedException(); //return an error 
         }
 
-        // [HttpGet]
-        // [Authorize(AuthenticationSchemes = "Bearer")]
-        // public async Task<JsonResult> GetNativePhrasesAsync([FromBody]GetNativePhrasesModel phrasesModel) //??
-        // {
-        //     User user = await GetUser();
-        //     var nativePhrases = dbcontext.WordPriorities
-        //                             .Where(wp => wp.Language.User == user)
-        //                             .Select(wp => wp.NativePhrase)
-        //                             .Skip(phrasesModel.Offset)
-        //                             .Take(phrasesModel.Amount)
-        //                             .ToList();
-        //     return new JsonResult(nativePhrases);
-        // }
-
         [HttpPost]
         [Authorize(AuthenticationSchemes = "Bearer")]
         public async Task<JsonResult> GetTranslations([FromBody]GetTranslations translationsModel) //??
