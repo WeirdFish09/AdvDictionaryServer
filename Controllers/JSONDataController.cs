@@ -76,7 +76,7 @@ namespace AdvDictionaryServer.Controllers
 
         [HttpPost]
         [Authorize(AuthenticationSchemes = "Bearer")]
-        public async Task<JsonResult> GetTranslations([FromBody]GetTranslations translationsModel) //??
+        public async Task<JsonResult> GetTranslations([FromBody]GetTranslations translationsModel)
         {
             User user = await GetUser();
             List<Language> allLanguages = dbcontext.Languages.ToList();
