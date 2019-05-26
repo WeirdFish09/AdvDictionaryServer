@@ -60,7 +60,6 @@ namespace AdvDictionaryServer.Controllers
         [HttpPost]
         public async Task<JsonResult> Register([FromBody]RegisterModel registerModel)
         {
-            //RegisterModel registerModel = JsonConvert.DeserializeObject<RegisterModel>(registerModelJson);
             User user = new User { Email = registerModel.Email, UserName = registerModel.Email, NativeLanguage = registerModel.NativeLanguage };
             var result = await userManager.CreateAsync(user, registerModel.Password);
             if (result.Succeeded)
