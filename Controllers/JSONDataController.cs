@@ -104,7 +104,7 @@ namespace AdvDictionaryServer.Controllers
 
         [HttpGet]
         [Authorize(AuthenticationSchemes = "Bearer")]
-        public async Task<JsonResult> GetForeignWordsAsync([FromBody]GetForeignWordsModel wordsModel) //??
+        public async Task<JsonResult> GetForeignWordsAsync([FromBody]GetForeignWordsModel wordsModel)
         {
             User user = await GetUser();
             var nativePhrases = dbcontext.WordPriorities
