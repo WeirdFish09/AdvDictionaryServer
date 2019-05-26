@@ -349,20 +349,20 @@ namespace AdvDictionaryServer.Models
             wordPriorities.AddRange(GetWordsByPriorityWithUpperMargin(wellknownWordsCount, semiKnownWordPriorityUpperLimit, highestKnownWordPriority));
             if (wordPriorities.Count < wellknownWordsCount)
             {
-                wordPriorities.AddRange(GetWordsByPriority(semiknownWordsCount + unknownWordsCount - wordPriorities.Count, leastKnownPriorityUpperLimit, semiKnownWordPriorityUpperLimit));
-            }
-            else
-            {
-                wordPriorities.AddRange(GetWordsByPriority(semiknownWordsCount, leastKnownPriorityUpperLimit, semiKnownWordPriorityUpperLimit));
-            }
-
-            if (wordPriorities.Count < wellknownWordsCount + semiknownWordsCount)
-            {
-                wordPriorities.AddRange(GetWordsByPriority(count - wordPriorities.Count, leastKnownWordPriority, leastKnownPriorityUpperLimit));
+                wordPriorities.AddRange(GetWordsByPriority(wellknownWordsCount + unknownWordsCount - wordPriorities.Count, leastKnownWordPriority, leastKnownPriorityUpperLimit));
             }
             else
             {
                 wordPriorities.AddRange(GetWordsByPriority(unknownWordsCount, leastKnownWordPriority, leastKnownPriorityUpperLimit));
+            }
+
+            if (wordPriorities.Count < wellknownWordsCount + unknownWordsCount)
+            {
+                wordPriorities.AddRange(GetWordsByPriority(count - wordPriorities.Count, leastKnownPriorityUpperLimit, semiKnownWordPriorityUpperLimit));
+            }
+            else
+            {
+                wordPriorities.AddRange(GetWordsByPriority(semiknownWordsCount, leastKnownPriorityUpperLimit, semiKnownWordPriorityUpperLimit));
             }
 
             return wordPriorities;
