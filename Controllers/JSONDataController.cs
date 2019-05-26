@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
+using System.Linq.Dynamic.Core;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
-using Newtonsoft.Json; 
+using Newtonsoft.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -138,13 +138,15 @@ namespace AdvDictionaryServer.Controllers
         public async Task<JsonResult> GetWordsPriorities([FromBody]GetWordPrioritiesModel wordPrioritiesModel)
         {
             User user = await GetUser();
+            var language = await dbcontext.Languages.Where(l => l.User == user && l.Name == wordPrioritiesModel.Language).SingleOrDefaultAsync();
             var wordPriorities = dbcontext.WordPriorities
                                     .Where(wp => wp.Language.User == user && wp.Language.Name == wordPrioritiesModel.Language )
-                                    .Skip(wordPrioritiesModel.Offset)
-                                    .Take(wordPrioritiesModel.Amount)
                                     .Include(wp => wp.ForeignWord)
                                     .Include(wp => wp.NativePhrase)
                                     .Include(wp => wp.Language)
+                                    .OrderBy(SortingOrderingCreator.CreateOrdering(wordPrioritiesModel.SortingVariant))
+                                    .Skip(wordPrioritiesModel.Offset)
+                                    .Take(wordPrioritiesModel.Amount)
                                     .ToList();
             List<WordPrioritiesJSON> wordPrioritiesJSON = new List<WordPrioritiesJSON>();
             foreach(var wp in wordPriorities){
@@ -176,12 +178,15 @@ namespace AdvDictionaryServer.Controllers
             User user = await GetUser();
             Language language = dbcontext.Languages.Where(l => (l.User == user) &&( l.Name == wordPrioritiesJSON[0].Language.Name)).Single();
             List<WordPriority> wordPriorities = new List<WordPriority>();
+            int priority = 0;
             foreach(var wp in wordPrioritiesJSON){
+                priority = wp.Value > 30 ? 30 : wp.Value;
+                priority = wp.Value < -30 ? -30 : wp.Value;
                 wordPriorities.Add(new WordPriority(){
                     Language = language,
                     ForeignWord = new ForeignWord(){Word = wp.Word.Word},
                     NativePhrase = new NativePhrase() {Phrase = wp.Phrase.Phrase},
-                    Value = wp.Value
+                    Value = priority
                 });
             } 
             await dbcontext.WordPriorities.AddRangeAsync(wordPriorities);
@@ -201,13 +206,16 @@ namespace AdvDictionaryServer.Controllers
             dbcontext.NativePhrases.RemoveRange(oldNativePhrases);
             dbcontext.WordPriorities.RemoveRange(oldWordPriorities);
             List<WordPriority> newWordPriorities = new List<WordPriority>();
-            foreach(var wpjson in wordPrioritiesJSON)
+            int priority = 0;
+            foreach (var wpjson in wordPrioritiesJSON)
             {
+                priority = wpjson.Value > 30 ? 30 : wpjson.Value;
+                priority = wpjson.Value < -30 ? -30 : wpjson.Value;
                 newWordPriorities.Add(new WordPriority(){
                     ForeignWord = foreignWord,
                     Language = language,
                     NativePhrase = new NativePhrase() {Phrase = wpjson.Phrase.Phrase},
-                    Value = wpjson.Value
+                    Value = priority
                 });
             }
             await dbcontext.WordPriorities.AddRangeAsync(newWordPriorities);
@@ -333,6 +341,7 @@ namespace AdvDictionaryServer.Controllers
                     .Select(wp => wp.NativePhrase).ToListAsync();
                 var wordPriorities = await dbcontext.WordPriorities.Where(wp => wp.Language == language & wp.ForeignWord == foreignWord).ToListAsync();
                 dbcontext.WordPriorities.RemoveRange(wordPriorities);
+                await dbcontext.SaveChangesAsync();
             } else
             {
                 translations = await dbcontext.WordPriorities.Where(wp => wp.Language == language & wp.ForeignWord == foreignWord)
@@ -340,6 +349,7 @@ namespace AdvDictionaryServer.Controllers
                 var wordPriorities = await dbcontext.WordPriorities.Where(wp => wp.Language == language & wp.ForeignWord == foreignWord).ToListAsync();
                 dbcontext.WordPriorities.RemoveRange(wordPriorities);
                 dbcontext.ForeignWords.Remove(foreignWord);
+                await dbcontext.SaveChangesAsync();
             }
             foreach(var nativePhrase in translations)
             {
@@ -348,6 +358,7 @@ namespace AdvDictionaryServer.Controllers
                     dbcontext.NativePhrases.Remove(nativePhrase);
                 }
             }
+            await dbcontext.SaveChangesAsync();
             return Ok();
         }
 

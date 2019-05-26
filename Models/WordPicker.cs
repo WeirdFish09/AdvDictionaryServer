@@ -247,10 +247,12 @@ namespace AdvDictionaryServer.Models
 
                 int leastKnownWordPriority = dbContext.WordPriorities.Select(wp => wp.Value).Min();
                 int highestKnownWordPriority = dbContext.WordPriorities.Select(wp => wp.Value).Max();
-                int leastKnownPriorityUpperLimit = leastKnownWordPriority + (highestKnownWordPriority - leastKnownWordPriority) / 3;
-                int semiKnownWordPriorityUpperLimit = leastKnownWordPriority + 2 * (highestKnownWordPriority - leastKnownWordPriority) / 3;
+                int leastKnownPriorityUpperLimit = Convert.ToInt32(leastKnownWordPriority + Math.Ceiling((decimal)(highestKnownWordPriority - leastKnownWordPriority) / 3));
+                int semiKnownWordPriorityUpperLimit = Convert.ToInt32(leastKnownWordPriority + Math.Ceiling((decimal)2 * (highestKnownWordPriority - leastKnownWordPriority) / 3));
+            //int leastKnownPriorityUpperLimit = leastKnownWordPriority + (highestKnownWordPriority - leastKnownWordPriority) / 3;
+            //int semiKnownWordPriorityUpperLimit = leastKnownWordPriority + 2 * (highestKnownWordPriority - leastKnownWordPriority) / 3;
 
-                int unknownWordsCount = (int)Math.Ceiling((decimal)count * leastKnownWordsPercentage / 100);
+            int unknownWordsCount = (int)Math.Ceiling((decimal)count * leastKnownWordsPercentage / 100);
                 int semiknownWordsCount = (int)Math.Ceiling((decimal)count * semiKnownWordsPercentage / 100);
                 int wellknownWordsCount = (int)Math.Ceiling((decimal)count * wellKnownWordsPercentage / 100);
 
@@ -291,8 +293,10 @@ namespace AdvDictionaryServer.Models
 
             int leastKnownWordPriority = dbContext.WordPriorities.Select(wp => wp.Value).Min();
             int highestKnownWordPriority = dbContext.WordPriorities.Select(wp => wp.Value).Max();
-            int leastKnownPriorityUpperLimit = leastKnownWordPriority + (highestKnownWordPriority - leastKnownWordPriority) / 3;
-            int semiKnownWordPriorityUpperLimit = leastKnownWordPriority + 2 * (highestKnownWordPriority - leastKnownWordPriority) / 3;
+            int leastKnownPriorityUpperLimit = Convert.ToInt32(leastKnownWordPriority + Math.Ceiling((decimal)(highestKnownWordPriority - leastKnownWordPriority) / 3));
+            int semiKnownWordPriorityUpperLimit = Convert.ToInt32(leastKnownWordPriority + Math.Ceiling((decimal)2 * (highestKnownWordPriority - leastKnownWordPriority) / 3));
+            //int leastKnownPriorityUpperLimit = leastKnownWordPriority + (highestKnownWordPriority - leastKnownWordPriority) / 3;
+            //int semiKnownWordPriorityUpperLimit = leastKnownWordPriority + 2 * (highestKnownWordPriority - leastKnownWordPriority) / 3;
 
             int unknownWordsCount = (int)Math.Ceiling((decimal)count * leastKnownWordsPercentage / 100);
             int semiknownWordsCount = (int)Math.Ceiling((decimal)count * semiKnownWordsPercentage / 100);
@@ -310,11 +314,11 @@ namespace AdvDictionaryServer.Models
 
             if (wordPriorities.Count < wellknownWordsCount + semiknownWordsCount)
             {
-                wordPriorities.AddRange(GetWordsByPriorityWithUpperMargin(count - wordPriorities.Count, leastKnownWordPriority, leastKnownPriorityUpperLimit));
+                wordPriorities.AddRange(GetWordsByPriority(count - wordPriorities.Count, leastKnownWordPriority, leastKnownPriorityUpperLimit));
             }
             else
             {
-                wordPriorities.AddRange(GetWordsByPriorityWithUpperMargin(unknownWordsCount, leastKnownWordPriority, leastKnownPriorityUpperLimit));
+                wordPriorities.AddRange(GetWordsByPriority(unknownWordsCount, leastKnownWordPriority, leastKnownPriorityUpperLimit));
             }
 
             return wordPriorities;
@@ -335,8 +339,8 @@ namespace AdvDictionaryServer.Models
 
             int leastKnownWordPriority = dbContext.WordPriorities.Select(wp => wp.Value).Min();
             int highestKnownWordPriority = dbContext.WordPriorities.Select(wp => wp.Value).Max();
-            int leastKnownPriorityUpperLimit = leastKnownWordPriority + (highestKnownWordPriority - leastKnownWordPriority) / 3;
-            int semiKnownWordPriorityUpperLimit = leastKnownWordPriority + 2 * (highestKnownWordPriority - leastKnownWordPriority) / 3;
+            int leastKnownPriorityUpperLimit = Convert.ToInt32(leastKnownWordPriority + Math.Ceiling((decimal)(highestKnownWordPriority - leastKnownWordPriority) / 3));
+            int semiKnownWordPriorityUpperLimit = Convert.ToInt32(leastKnownWordPriority + Math.Ceiling((decimal)2 * (highestKnownWordPriority - leastKnownWordPriority) / 3));
 
             int unknownWordsCount = (int)Math.Ceiling((decimal)count * leastKnownWordsPercentage / 100);
             int semiknownWordsCount = (int)Math.Ceiling((decimal)count * semiKnownWordsPercentage / 100);
@@ -354,11 +358,11 @@ namespace AdvDictionaryServer.Models
 
             if (wordPriorities.Count < wellknownWordsCount + semiknownWordsCount)
             {
-                wordPriorities.AddRange(GetWordsByPriorityWithUpperMargin(count - wordPriorities.Count, leastKnownWordPriority, leastKnownPriorityUpperLimit));
+                wordPriorities.AddRange(GetWordsByPriority(count - wordPriorities.Count, leastKnownWordPriority, leastKnownPriorityUpperLimit));
             }
             else
             {
-                wordPriorities.AddRange(GetWordsByPriorityWithUpperMargin(unknownWordsCount, leastKnownWordPriority, leastKnownPriorityUpperLimit));
+                wordPriorities.AddRange(GetWordsByPriority(unknownWordsCount, leastKnownWordPriority, leastKnownPriorityUpperLimit));
             }
 
             return wordPriorities;
