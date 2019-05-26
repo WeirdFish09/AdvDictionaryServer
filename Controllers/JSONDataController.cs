@@ -79,7 +79,6 @@ namespace AdvDictionaryServer.Controllers
         public async Task<JsonResult> GetTranslations([FromBody]GetTranslations translationsModel) //??
         {
             User user = await GetUser();
-            //
             List<Language> allLanguages = dbcontext.Languages.ToList();
             List<Language> languages = allLanguages.Where(l => l.Name == translationsModel.Language).ToList();
             List<Language> languages2 = dbcontext.Languages.Where(l => l.User == user).ToList();
