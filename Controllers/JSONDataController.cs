@@ -41,7 +41,6 @@ namespace AdvDictionaryServer.Controllers
         [HttpPost]
         public async Task<IActionResult> Login([FromBody]LoginModel model)
         {
-            //LoginModel loginModel = JsonConvert.DeserializeObject<LoginModel>(model);
             User user = await userManager.FindByEmailAsync(model.Email);
             if(user!=null){
                 var result = await signInManager.PasswordSignInAsync(user,model.Password,false,false);
