@@ -71,7 +71,7 @@ namespace AdvDictionaryServer.Controllers
                 var response = new LoginRegisterResponse() { Token = jwtToken, Id = user.Id};
                 return new JsonResult(response);
             }
-            throw new NotImplementedException(); //return an error 
+            throw new NotImplementedException();
         }
 
         [HttpPost]
