@@ -267,7 +267,6 @@ namespace AdvDictionaryServer.Controllers
         public async Task<JsonResult> GetLanguages()
         {
             User user = await GetUser();
-            //var languages = dbcontext.WordPriorities.Where(wp => wp.User == user ).Select(wp => wp.Language).ToList();
             var languageNames = dbcontext.Languages
                                 .Where(l => l.User == user).Select(l => l.Name).ToList();
             List<LanguageJSON> languages = new List<LanguageJSON>();
